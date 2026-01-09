@@ -1,0 +1,7 @@
+/.vscode
+*.exe
+*.o
+*.dll
+/include/chelp
+/include/SDL3
+*.a
