@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <SDL3/SDL.h>
 
+#include "vec2.h"
+
 
 #define WINDOW_TITLE  "Dungeon"
 #define WINDOW_WIDTH  1280
@@ -84,18 +86,16 @@ int main() {
     // Loop
     bool running = true;
     while ( running ) {
+        // Handle events
         SDL_Event event;
         while ( SDL_PollEvent( &event ) ) {
             if ( event.type == SDL_EVENT_QUIT )
                 running = false;
         }
 
-        for ( int j = 0; j < SCREEN_HEIGHT; j++ ) {
-            for ( int i = 0; i < SCREEN_WIDTH; i++ ) {
-                set_pixel( i, j, (float)i / SCREEN_WIDTH, (float)j / SCREEN_HEIGHT, SDL_sin( ( 2*i + j ) * 0.02 ) );
-            }
-        }
 
+
+        // Render pixels
         SDL_UpdateTexture( state.screen, NULL, state.pixels, SCREEN_WIDTH * sizeof( uint32_t ) );
         SDL_RenderTexture( state.renderer, state.screen, NULL, NULL );
         SDL_RenderPresent( state.renderer );
