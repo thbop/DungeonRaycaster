@@ -37,6 +37,7 @@
 #define CAMERA_ROTATE_DELTA 0.1f
 
 
+
 typedef struct {
     ray_t view;
 } camera_t;

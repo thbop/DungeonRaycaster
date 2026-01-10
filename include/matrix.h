@@ -25,14 +25,14 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "string.h"
 #include "SDL3/SDL.h"
 #include "vec2.h"
 
-#define mat2 float[2][2]
 
 float mat2_det( float *mat );
 
-void mat2_invert( float *mat, float *result );
+bool mat2_invert( float *mat, float *result );
 
 vec2 mat2_transform( float *mat, vec2 *p );
 

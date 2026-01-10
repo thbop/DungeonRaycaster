@@ -26,11 +26,16 @@
 #define RAY_H
 
 #include "vec2.h"
+#include "matrix.h"
 
 typedef struct {
     vec2 origin, direction;
 } ray_t;
 
 vec2 ray_at( ray_t *ray, float t );
+
+// Returns a vec2 with the respective t values for where a and b intersect
+// Returns VEC2_ZERO upon error
+vec2 ray_intersect( ray_t *a, ray_t *b );
 
 #endif

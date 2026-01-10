@@ -29,15 +29,17 @@ float mat2_det( float *mat ) {
 }
 
 // Source: https://www.chilimath.com/lessons/advanced-algebra/inverse-of-a-2x2-matrix/
-void mat2_invert( float *mat, float *result ) {
+bool mat2_invert( float *mat, float *result ) {
     float det = mat2_det( mat );
-    if ( SDL_fabsf( det ) < 0.0001f ) return;
+    if ( SDL_fabsf( det ) < 0.0001f ) return false;
 
     float inv_det = 1.0f / det;
-    result = (mat2){
+    float out[4] = {
          mat[3] * inv_det, -mat[1] * inv_det,
         -mat[2] * inv_det,  mat[0] * inv_det,
     };
+    memcpy( result, out, sizeof( float ) * 4 );
+    return true;
 }
 
 vec2 mat2_transform( float *mat, vec2 *p ) {

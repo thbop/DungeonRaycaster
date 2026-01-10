@@ -31,3 +31,15 @@ vec2 ray_at( ray_t *ray, float t ) {
         ray->direction.y * t + ray->origin.y,
     };
 }
+
+vec2 ray_intersect( ray_t *a, ray_t *b ) {
+    float mat[4] = {
+        a->direction.x, -b->direction.x,
+        a->direction.y, -b->direction.y,
+    };
+    if ( !mat2_invert( mat, mat ) ) return VEC2_ZERO;
+
+    vec2 p = vec2_sub( &b->origin, &a->origin );
+    
+    return mat2_transform( mat, &p );
+}
