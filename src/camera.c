@@ -22,30 +22,34 @@
 * SOFTWARE.
 */
 
-#ifndef CAMERA_H
-#define CAMERA_H
+#include "camera.h"
 
-
-#include "SDL3/SDL.h"
-#include "vec2.h"
-#include "matrix.h"
-#include "ray.h"
-
-
-typedef struct {
-    ray_t view;
-    
-    // Pre-computed rotation matrices
-    // TODO: Possibly improve memory efficiency
+void camera_new( camera_t *camera, vec2 position, float rotation_delta ) {
     float
-        _rotate_right[4],
-        _rotate_left[4];
-} camera_t;
+        sin_theta = SDL_sinf( rotation_delta ), // sin(-x) = -sin(x) 
+        cos_theta = SDL_cosf( rotation_delta ); // cos(-x) =  cos(x)
+    
+    *camera = (camera_t){
+        .view = (ray_t){
+            .origin = position,
+            .direction = (vec2){ 1.0f, 0.0f },
+        },
 
+        ._rotate_left = {
+             cos_theta, -sin_theta,
+             sin_theta,  cos_theta,
+        },
+        ._rotate_right = {
+             cos_theta,  sin_theta,
+            -sin_theta,  cos_theta,
+        },
+    };
+}
 
-void camera_new( camera_t *camera, vec2 position, float rotation_delta );
+void camera_rotate_right( camera_t *camera ) {
+    mat2_transform( camera->_rotate_right, &camera->view.direction );
+}
 
-void camera_rotate_right( camera_t *camera );
-void camera_rotate_left( camera_t *camera );
-
-#endif
+void camera_rotate_left( camera_t *camera ) {
+    mat2_transform( camera->_rotate_left, &camera->view.direction );
+}

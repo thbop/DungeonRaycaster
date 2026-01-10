@@ -28,15 +28,17 @@
 
 #include "vec2.h"
 #include "ray.h"
+#include "camera.h"
 
 
-#define WINDOW_TITLE  "Dungeon"
-#define WINDOW_WIDTH  1280
-#define WINDOW_HEIGHT 720
-#define SCREEN_WIDTH  320
-#define SCREEN_HEIGHT 180
-#define MAP_WIDTH     3
-#define MAP_HEIGHT    3
+#define WINDOW_TITLE          "Dungeon"
+#define WINDOW_WIDTH          1280
+#define WINDOW_HEIGHT         720
+#define SCREEN_WIDTH          320
+#define SCREEN_HEIGHT         180
+#define MAP_WIDTH             3
+#define MAP_HEIGHT            3
+#define CAMERA_ROTATION_DELTA 0.01f
 
 const static char char_map[] = 
     "   "
@@ -56,6 +58,7 @@ static struct {
     uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
 
     vector_t map;
+    camera_t camera;
 } state;
 
 
@@ -137,6 +140,8 @@ int main() {
     ) );
 
     generate_map();
+    
+    camera_new( &state.camera, VEC2_ZERO, CAMERA_ROTATION_DELTA );
 
 
     // Loop
