@@ -48,6 +48,7 @@ const static char char_map[] =
         SDL_Log( "ERROR: %s", SDL_GetError() )
 
 
+
 static struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
@@ -89,7 +90,7 @@ ray_t get_ray_line( vec2 a, vec2 b ) {
 
 void generate_map() {
     state.map = new_vector( ray_t );
-    
+
     for ( int j = 0; j < MAP_HEIGHT; j++ ) {
         for ( int i = 0; i < MAP_WIDTH; i++ ) {
 
