@@ -43,7 +43,7 @@
 #define MAP_WIDTH          8
 #define MAP_HEIGHT         8
 
-#define TURN_SPEED         0.01f
+#define TURN_SPEED         0.007f
 #define MOVE_SPEED         0.001f
 
 const static char char_map[] = 
@@ -52,7 +52,7 @@ const static char char_map[] =
     "        "
     "  #  #  "
     "        "
-    "        "
+    "  #  #  "
     "        "
     "        ";
 
@@ -83,17 +83,16 @@ void set_pixel( int x, int y, float r, float g, float b ) {
     if ( y < 0 || y > SCREEN_HEIGHT - 1 ) return;
 
     uint32_t color =
-        0x000000FF               |
-        float_to_byte( r ) << 24 |
-        float_to_byte( g ) << 16 |
-        float_to_byte( b ) << 8;
+        float_to_byte( r ) << 16 |
+        float_to_byte( g ) << 8  |
+        float_to_byte( b );
     
     state.pixels[ y * SCREEN_WIDTH + x ] = color;
 }
 
 char char_map_get_tile( int x, int y ) {
-    if ( x < 0 || x >= MAP_WIDTH )  return ' ';
-    if ( y < 0 || y >= MAP_HEIGHT ) return ' ';
+    if ( x < 0 || x > MAP_WIDTH - 1 )  return ' ';
+    if ( y < 0 || y > MAP_HEIGHT - 1 ) return ' ';
 
     return char_map[ y * MAP_WIDTH + x ];
 }
@@ -125,7 +124,7 @@ void generate_map() {
                     vector_append( state.map, ray_line );
                 }
                 if ( char_map_get_tile( i, j + 1 ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
+                    ray_line = get_ray_line( (vec2){ i, j + 1 }, (vec2){ i + 1, j + 1 } );
                     vector_append( state.map, ray_line );
                 }
             }
@@ -169,17 +168,13 @@ void ray_cast( int x, ray_t *ray ) {
 }
 
 void cast_rays() {
-    float rotate_left[4] = {
-         0.0f, -1.0f,
-         1.0f,  0.0f,
-    };
+    
 
     vec2 sensor_left, sensor_right; {
         vec2
             _sensor_center = vec2_add( &state.camera.view.origin, &state.camera.view.direction ),
-            _perpendicular_direction = mat2_transform( rotate_left, &state.camera.view.direction ),
-            _left_edge_delta = vec2_mul_value( &_perpendicular_direction, state.camera.half_sensor_width ),
-            _right_edge_delta = vec2_mul_value( &_perpendicular_direction, -state.camera.half_sensor_width );
+            _left_edge_delta = vec2_mul_value( &state.camera.perpendicular_direction, state.camera.half_sensor_width ),
+            _right_edge_delta = vec2_mul_value( &state.camera.perpendicular_direction, -state.camera.half_sensor_width );
         sensor_left = vec2_add( &_sensor_center, &_left_edge_delta ),
         sensor_right = vec2_add( &_sensor_center, &_right_edge_delta );
     }
@@ -217,7 +212,7 @@ int main() {
 
     SDL_ASSERT( state.screen = SDL_CreateTexture(
         state.renderer,
-        SDL_PIXELFORMAT_RGBA8888,
+        SDL_PIXELFORMAT_XRGB8888,
         SDL_TEXTUREACCESS_STREAMING,
         SCREEN_WIDTH,
         SCREEN_HEIGHT
@@ -250,8 +245,10 @@ int main() {
         if ( keys[SDL_SCANCODE_RIGHT] ) camera_rotate_right( &state.camera );
         if ( keys[SDL_SCANCODE_W] )     camera_move_forward( &state.camera );
         if ( keys[SDL_SCANCODE_S] )     camera_move_backward( &state.camera );
+        if ( keys[SDL_SCANCODE_A] )     camera_move_left( &state.camera );
+        if ( keys[SDL_SCANCODE_D] )     camera_move_right( &state.camera );
 
-        memset( state.pixels, 0xFF, sizeof( state.pixels ) ); // Clear screen
+        memset( state.pixels, 0, sizeof( state.pixels ) ); // Clear screen
         cast_rays();
 
         // Render pixels

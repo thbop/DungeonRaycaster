@@ -41,6 +41,7 @@ typedef struct {
 
 typedef struct {
     ray_t view;
+    vec2 perpendicular_direction;
 
     float half_sensor_width;
     
@@ -59,5 +60,7 @@ void camera_rotate_right( camera_t *camera );
 void camera_rotate_left( camera_t *camera );
 void camera_move_forward( camera_t *camera );
 void camera_move_backward( camera_t *camera );
+void camera_move_left( camera_t *camera );
+void camera_move_right( camera_t *camera );
 
 #endif

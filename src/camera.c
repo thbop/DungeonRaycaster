@@ -37,6 +37,8 @@ void camera_new( camera_t *camera, camera_settings_t *settings ) {
             .direction = (vec2){ 1.0f, 0.0f },
         },
 
+        .perpendicular_direction = (vec2){ 0.0f, 1.0f },
+
         .half_sensor_width = SDL_tanf( settings->fov * deg2rad * 0.5f ),
 
         ._move_speed = settings->move_speed,
@@ -53,10 +55,12 @@ void camera_new( camera_t *camera, camera_settings_t *settings ) {
 
 void camera_rotate_right( camera_t *camera ) {
     camera->view.direction = mat2_transform( camera->_rotate_right, &camera->view.direction );
+    camera->perpendicular_direction = mat2_transform( camera->_rotate_right, &camera->perpendicular_direction );
 }
 
 void camera_rotate_left( camera_t *camera ) {
     camera->view.direction = mat2_transform( camera->_rotate_left, &camera->view.direction );
+    camera->perpendicular_direction = mat2_transform( camera->_rotate_left, &camera->perpendicular_direction );
 }
 
 void camera_move_forward( camera_t *camera ) {
@@ -66,5 +70,15 @@ void camera_move_forward( camera_t *camera ) {
 
 void camera_move_backward( camera_t *camera ) {
     vec2 delta = vec2_mul_value( &camera->view.direction, -camera->_move_speed );
+    camera->view.origin = vec2_add( &camera->view.origin, &delta );
+}
+
+void camera_move_left( camera_t *camera ) {
+    vec2 delta = vec2_mul_value( &camera->perpendicular_direction, camera->_move_speed );
+    camera->view.origin = vec2_add( &camera->view.origin, &delta );
+}
+
+void camera_move_right( camera_t *camera ) {
+    vec2 delta = vec2_mul_value( &camera->perpendicular_direction, -camera->_move_speed );
     camera->view.origin = vec2_add( &camera->view.origin, &delta );
 }
