@@ -24,17 +24,22 @@
 
 #include "camera.h"
 
-void camera_new( camera_t *camera, vec2 position, float rotation_delta ) {
+void camera_new( camera_t *camera, camera_settings_t *settings ) {
     float
-        sin_theta = SDL_sinf( rotation_delta ), // sin(-x) = -sin(x) 
-        cos_theta = SDL_cosf( rotation_delta ); // cos(-x) =  cos(x)
-    
+        deg2rad   = SDL_PI_F / 180.0f,
+        sin_theta = SDL_sinf( settings->rotation_delta * deg2rad ), // sin(-x) = -sin(x) 
+        cos_theta = SDL_cosf( settings->rotation_delta * deg2rad ); // cos(-x) =  cos(x)
+
+
     *camera = (camera_t){
         .view = (ray_t){
-            .origin = position,
+            .origin = settings->position,
             .direction = (vec2){ 1.0f, 0.0f },
         },
 
+        .half_sensor_width = SDL_tanf( settings->fov * deg2rad * 0.5f ),
+
+        ._move_speed = settings->move_speed,
         ._rotate_left = {
              cos_theta, -sin_theta,
              sin_theta,  cos_theta,
@@ -47,9 +52,19 @@ void camera_new( camera_t *camera, vec2 position, float rotation_delta ) {
 }
 
 void camera_rotate_right( camera_t *camera ) {
-    mat2_transform( camera->_rotate_right, &camera->view.direction );
+    camera->view.direction = mat2_transform( camera->_rotate_right, &camera->view.direction );
 }
 
 void camera_rotate_left( camera_t *camera ) {
-    mat2_transform( camera->_rotate_left, &camera->view.direction );
+    camera->view.direction = mat2_transform( camera->_rotate_left, &camera->view.direction );
+}
+
+void camera_move_forward( camera_t *camera ) {
+    vec2 delta = vec2_mul_value( &camera->view.direction, camera->_move_speed );
+    camera->view.origin = vec2_add( &camera->view.origin, &delta );
+}
+
+void camera_move_backward( camera_t *camera ) {
+    vec2 delta = vec2_mul_value( &camera->view.direction, -camera->_move_speed );
+    camera->view.origin = vec2_add( &camera->view.origin, &delta );
 }

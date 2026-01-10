@@ -22,28 +22,39 @@
 * SOFTWARE.
 */
 
+#include <float.h>
 #include <stdint.h>
 #include <SDL3/SDL.h>
 #include <chelp/vector_t.h>
 
 #include "vec2.h"
 #include "ray.h"
+#include "matrix.h"
 #include "camera.h"
 
 
-#define WINDOW_TITLE          "Dungeon"
-#define WINDOW_WIDTH          1280
-#define WINDOW_HEIGHT         720
-#define SCREEN_WIDTH          320
-#define SCREEN_HEIGHT         180
-#define MAP_WIDTH             3
-#define MAP_HEIGHT            3
-#define CAMERA_ROTATION_DELTA 0.01f
+#define WINDOW_TITLE       "Dungeon"
+#define WINDOW_WIDTH       1280
+#define WINDOW_HEIGHT      720
+#define SCREEN_WIDTH       320
+#define SCREEN_HEIGHT      180
+#define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
+#define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
+#define MAP_WIDTH          8
+#define MAP_HEIGHT         8
+
+#define TURN_SPEED         0.01f
+#define MOVE_SPEED         0.001f
 
 const static char char_map[] = 
-    "   "
-    " # "
-    "    ";
+    "        "
+    "        "
+    "        "
+    "  #  #  "
+    "        "
+    "        "
+    "        "
+    "        ";
 
 #define SDL_ASSERT( x ) \
     if ( !( x ) ) \
@@ -68,6 +79,9 @@ uint32_t float_to_byte( float value ) {
 }
 
 void set_pixel( int x, int y, float r, float g, float b ) {
+    if ( x < 0 || x > SCREEN_WIDTH - 1 )  return;
+    if ( y < 0 || y > SCREEN_HEIGHT - 1 ) return;
+
     uint32_t color =
         0x000000FF               |
         float_to_byte( r ) << 24 |
@@ -96,25 +110,95 @@ void generate_map() {
 
     for ( int j = 0; j < MAP_HEIGHT; j++ ) {
         for ( int i = 0; i < MAP_WIDTH; i++ ) {
-
-            if ( char_map_get_tile( i - 1, j ) == ' ' ) {
-                ray_t ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i, j + 1 } );
-                vector_append( state.map, ray_line );
+            ray_t ray_line;
+            if ( char_map_get_tile( i, j ) == '#' ) {
+                if ( char_map_get_tile( i - 1, j ) == ' ' ) {
+                    ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i, j + 1 } );
+                    vector_append( state.map, ray_line );
+                }
+                if ( char_map_get_tile( i, j - 1 ) == ' ' ) {
+                    ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i + 1, j } );
+                    vector_append( state.map, ray_line );
+                }
+                if ( char_map_get_tile( i + 1, j ) == ' ' ) {
+                    ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
+                    vector_append( state.map, ray_line );
+                }
+                if ( char_map_get_tile( i, j + 1 ) == ' ' ) {
+                    ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
+                    vector_append( state.map, ray_line );
+                }
             }
-            if ( char_map_get_tile( i, j - 1 ) == ' ' ) {
-                ray_t ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i + 1, j } );
-                vector_append( state.map, ray_line );
-            }
-            if ( char_map_get_tile( i + 1, j ) == ' ' ) {
-                ray_t ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
-                vector_append( state.map, ray_line );
-            }
-            if ( char_map_get_tile( i, j + 1 ) == ' ' ) {
-                ray_t ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
-                vector_append( state.map, ray_line );
-            }
-
         }
+    }
+}
+
+void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
+    int half_wall_height = SCREEN_HALF_HEIGHT / view_t;
+
+    for ( int j = 0; j < half_wall_height; j++ ) {
+        set_pixel( x, SCREEN_HALF_HEIGHT + j, 1.0f, 0.0f, 0.0f );
+        set_pixel( x, SCREEN_HALF_HEIGHT - j, 1.0f, 0.0f, 0.0f );
+    }
+}
+
+void ray_cast( int x, ray_t *ray ) {
+    ray_t *closest_wall = NULL;
+    float
+        closest_t = FLT_MAX,
+        wall_t;
+    for ( int i = 0; i < state.map.elementCount; i++ ) {
+        ray_t *wall = (ray_t*)(state.map.buffer + i * sizeof( ray_t ));
+
+        vec2 intersect_result;
+        if ( !ray_intersect( ray, wall, &intersect_result ) ) continue;
+        if ( intersect_result.x < 1.0e-12f ) continue;
+        if ( intersect_result.y < 0.0f ) continue;
+        if ( intersect_result.y > 1.0f ) continue;
+
+        if ( intersect_result.x < closest_t ) {
+            closest_wall = wall;
+            closest_t = intersect_result.x;
+            wall_t = intersect_result.y;
+        }
+    }
+
+    if ( closest_wall != NULL ) { // If ray hit the nearest wall
+        rasterize_ray_cast( x, closest_t, wall_t, closest_wall );
+    }
+}
+
+void cast_rays() {
+    float rotate_left[4] = {
+         0.0f, -1.0f,
+         1.0f,  0.0f,
+    };
+
+    vec2 sensor_left, sensor_right; {
+        vec2
+            _sensor_center = vec2_add( &state.camera.view.origin, &state.camera.view.direction ),
+            _perpendicular_direction = mat2_transform( rotate_left, &state.camera.view.direction ),
+            _left_edge_delta = vec2_mul_value( &_perpendicular_direction, state.camera.half_sensor_width ),
+            _right_edge_delta = vec2_mul_value( &_perpendicular_direction, -state.camera.half_sensor_width );
+        sensor_left = vec2_add( &_sensor_center, &_left_edge_delta ),
+        sensor_right = vec2_add( &_sensor_center, &_right_edge_delta );
+    }
+
+    float
+        lerp_t_delta = 1.0f / SCREEN_WIDTH,
+        lerp_t = 0.0f;
+    
+    ray_t ray = {
+        .origin = state.camera.view.origin,
+    };
+
+    for ( int i = 0; i < SCREEN_WIDTH; i++ ) {
+        vec2 sensor_target = vec2_lerp( &sensor_left, &sensor_right, lerp_t );
+        ray.direction = vec2_sub( &sensor_target, &state.camera.view.origin );
+
+        ray_cast( i, &ray );
+
+        lerp_t += lerp_t_delta;
     }
 }
 
@@ -138,10 +222,17 @@ int main() {
         SCREEN_WIDTH,
         SCREEN_HEIGHT
     ) );
+    SDL_SetTextureScaleMode( state.screen, SDL_SCALEMODE_NEAREST );
 
     generate_map();
-    
-    camera_new( &state.camera, VEC2_ZERO, CAMERA_ROTATION_DELTA );
+
+    camera_settings_t camera_settings = {
+        .position       = VEC2_ZERO,
+        .rotation_delta = 0.1f,
+        .fov            = 100.0f,
+        .move_speed     = MOVE_SPEED,
+    };
+    camera_new( &state.camera, &camera_settings );
 
 
     // Loop
@@ -154,7 +245,14 @@ int main() {
                 running = false;
         }
 
+        const bool *keys = SDL_GetKeyboardState( NULL );
+        if ( keys[SDL_SCANCODE_LEFT]  ) camera_rotate_left( &state.camera ); 
+        if ( keys[SDL_SCANCODE_RIGHT] ) camera_rotate_right( &state.camera );
+        if ( keys[SDL_SCANCODE_W] )     camera_move_forward( &state.camera );
+        if ( keys[SDL_SCANCODE_S] )     camera_move_backward( &state.camera );
 
+        memset( state.pixels, 0xFF, sizeof( state.pixels ) ); // Clear screen
+        cast_rays();
 
         // Render pixels
         SDL_UpdateTexture( state.screen, NULL, state.pixels, SCREEN_WIDTH * sizeof( uint32_t ) );
@@ -169,5 +267,8 @@ int main() {
     SDL_DestroyTexture( state.screen );
     SDL_DestroyRenderer( state.renderer );
     SDL_DestroyWindow( state.window );
+    SDL_Quit();
+
+    return 0;
 
 }

@@ -35,7 +35,7 @@ typedef struct {
 vec2 ray_at( ray_t *ray, float t );
 
 // Returns a vec2 with the respective t values for where a and b intersect
-// Returns VEC2_ZERO upon error
-vec2 ray_intersect( ray_t *a, ray_t *b );
+// Returns false upon error
+bool ray_intersect( ray_t *a, ray_t *b, vec2 *result );
 
 #endif

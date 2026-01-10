@@ -31,10 +31,20 @@
 #include "matrix.h"
 #include "ray.h"
 
+typedef struct {
+    vec2 position;
+    float
+        rotation_delta, // In degrees
+        fov,            // In degrees
+        move_speed;
+} camera_settings_t;
 
 typedef struct {
     ray_t view;
+
+    float half_sensor_width;
     
+    float _move_speed;
     // Pre-computed rotation matrices
     // TODO: Possibly improve memory efficiency
     float
@@ -43,9 +53,11 @@ typedef struct {
 } camera_t;
 
 
-void camera_new( camera_t *camera, vec2 position, float rotation_delta );
+void camera_new( camera_t *camera, camera_settings_t *settings );
 
 void camera_rotate_right( camera_t *camera );
 void camera_rotate_left( camera_t *camera );
+void camera_move_forward( camera_t *camera );
+void camera_move_backward( camera_t *camera );
 
 #endif
