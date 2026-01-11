@@ -34,6 +34,7 @@
 #include "ray.h"
 #include "matrix.h"
 #include "camera.h"
+#include "map.h"
 
 
 #define WINDOW_TITLE       "Dungeon"
@@ -46,8 +47,8 @@
 #define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
 #define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
 
-#define MAP_WIDTH          16
-#define MAP_HEIGHT         16
+#define ASCII_MAP_WIDTH    16
+#define ASCII_MAP_HEIGHT   16
 
 #define START_POS          (vec2){ 1.5f, 1.5f }
 #define FOV                90.0f
@@ -81,11 +82,6 @@ const static char char_map[] =
         SDL_Log( "ERROR: %s", SDL_GetError() )
 
 
-enum {
-    TEXTURE_BRICK,
-    TEXTURE_COUNT,
-};
-
 
 static struct {
     SDL_Window *window;
@@ -95,7 +91,7 @@ static struct {
 
     SDL_Surface *textures[TEXTURE_COUNT];
 
-    vector_t map;
+    map_t map;
     camera_t camera;
 } state;
 
@@ -121,47 +117,6 @@ void set_pixel( int x, int y, float r, float g, float b ) {
     state.pixels[ y * SCREEN_WIDTH + x ] = color;
 }
 
-char char_map_get_tile( int x, int y ) {
-    if ( x < 0 || x > MAP_WIDTH - 1 )  return ' ';
-    if ( y < 0 || y > MAP_HEIGHT - 1 ) return ' ';
-
-    return char_map[ y * MAP_WIDTH + x ];
-}
-
-ray_t get_ray_line( vec2 a, vec2 b ) {
-    return (ray_t){
-        .direction = vec2_sub( &b, &a ),
-        .origin    = a,
-    };
-}
-
-void generate_map() {
-    state.map = new_vector( ray_t );
-
-    for ( int j = 0; j < MAP_HEIGHT; j++ ) {
-        for ( int i = 0; i < MAP_WIDTH; i++ ) {
-            ray_t ray_line;
-            if ( char_map_get_tile( i, j ) == '#' ) {
-                if ( char_map_get_tile( i - 1, j ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i, j + 1 }, (vec2){ i, j } );
-                    vector_append( state.map, ray_line );
-                }
-                if ( char_map_get_tile( i, j - 1 ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i + 1, j } );
-                    vector_append( state.map, ray_line );
-                }
-                if ( char_map_get_tile( i + 1, j ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i + 1, j }, (vec2){ i + 1, j + 1 } );
-                    vector_append( state.map, ray_line );
-                }
-                if ( char_map_get_tile( i, j + 1 ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i + 1, j + 1 }, (vec2){ i, j + 1 } );
-                    vector_append( state.map, ray_line );
-                }
-            }
-        }
-    }
-}
 
 vec3 sample_texture( int texture_id, float u, float v ) {
     SDL_Surface *texture = state.textures[texture_id];
@@ -177,15 +132,15 @@ vec3 sample_texture( int texture_id, float u, float v ) {
     };
 }
 
-float calculate_light( ray_t *wall ) {
+float calculate_light( wall_t *wall ) {
     vec2
-        perpendicular = { -wall->direction.y, wall->direction.x },
+        perpendicular = { -wall->line.direction.y, wall->line.direction.x },
         normal        = vec2_normalize( &perpendicular );
     
     return vec2_dot( &state.camera.view.direction, &normal ) * 0.5f + 0.5f;
 }
 
-void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
+void rasterize_ray_cast( int x, float view_t, float wall_u, wall_t *wall ) {
     int half_wall_height = SCREEN_HALF_HEIGHT / view_t;
 
     float v_half_delta = 0.5f / half_wall_height;
@@ -195,8 +150,8 @@ void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
 
     for ( int j = 0; j < half_wall_height; j++ ) {
         vec3
-            color_high = sample_texture( TEXTURE_BRICK, wall_t, 0.5f - v_half ),
-            color_low  = sample_texture( TEXTURE_BRICK, wall_t, 0.5f + v_half );
+            color_high = sample_texture( wall->texture_id, wall_u, 0.5f - v_half ),
+            color_low  = sample_texture( wall->texture_id, wall_u, 0.5f + v_half );
         color_high = vec3_mul_value( &color_high, light );
         color_low = vec3_mul_value( &color_low, light );
         
@@ -208,15 +163,15 @@ void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
 }
 
 void ray_cast( int x, ray_t *ray ) {
-    ray_t *closest_wall = NULL;
+    wall_t *closest_wall = NULL;
     float
         closest_t = FLT_MAX,
-        wall_t;
-    for ( int i = 0; i < state.map.elementCount; i++ ) {
-        ray_t *wall = (ray_t*)(state.map.buffer + i * sizeof( ray_t ));
+        wall_u;
+    for ( int i = 0; i < state.map.walls.elementCount; i++ ) {
+        wall_t *wall = _vector_at( &state.map.walls, i );
 
         vec2 intersect_result;
-        if ( !ray_intersect( ray, wall, &intersect_result ) ) continue;
+        if ( !ray_intersect( ray, &wall->line, &intersect_result ) ) continue;
         if ( intersect_result.x < 1.0e-12f ) continue;
         if ( intersect_result.y < 0.0f ) continue;
         if ( intersect_result.y > 1.0f ) continue;
@@ -224,12 +179,12 @@ void ray_cast( int x, ray_t *ray ) {
         if ( intersect_result.x < closest_t ) {
             closest_wall = wall;
             closest_t = intersect_result.x;
-            wall_t = intersect_result.y;
+            wall_u = intersect_result.y;
         }
     }
 
     if ( closest_wall != NULL ) { // If ray hit the nearest wall
-        rasterize_ray_cast( x, closest_t, wall_t, closest_wall );
+        rasterize_ray_cast( x, closest_t, wall_u, closest_wall );
     }
 }
 
@@ -287,7 +242,12 @@ int main() {
 
     state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/bricks.png" );
 
-    generate_map();
+    ascii_map_t ascii_map = {
+        .data   = char_map,
+        .width  = ASCII_MAP_WIDTH,
+        .height = ASCII_MAP_HEIGHT,
+    };
+    map_generate_from_ascii( &ascii_map, &state.map );
 
     camera_settings_t camera_settings = {
         .position       = START_POS,
@@ -338,7 +298,7 @@ int main() {
     for ( int i = 0; i < TEXTURE_COUNT; i++ )
         SDL_DestroySurface( state.textures[i] );
 
-    vector_free( state.map );
+    map_free( &state.map );
 
     SDL_DestroyTexture( state.screen );
     SDL_DestroyRenderer( state.renderer );
