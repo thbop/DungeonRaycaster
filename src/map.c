@@ -27,6 +27,7 @@
 uint32_t _wall_ascii_to_texture( char ascii ) {
     switch ( ascii ) {
         case '#': return TEXTURE_BRICK;
+        case '/': return TEXTURE_DOOR;
     }
 
     return ' ';

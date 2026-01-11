@@ -33,6 +33,7 @@
 
 enum {
     TEXTURE_BRICK,
+    TEXTURE_DOOR,
     TEXTURE_COUNT,
 };
 

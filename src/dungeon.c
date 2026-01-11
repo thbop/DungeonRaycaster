@@ -60,7 +60,7 @@
 #endif
 
 const static char char_map[] = 
-    "################"
+    "###/############"
     "#     ##       #"
     "#     ##       #"
     "####  ######   #"
@@ -189,8 +189,6 @@ void ray_cast( int x, ray_t *ray ) {
 }
 
 void cast_rays() {
-    
-
     vec2 sensor_left, sensor_right; {
         vec2
             _sensor_center = vec2_add( &state.camera.view.origin, &state.camera.view.direction ),
@@ -240,7 +238,8 @@ int main() {
     ) );
     SDL_SetTextureScaleMode( state.screen, SDL_SCALEMODE_NEAREST );
 
-    state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/bricks.png" );
+    state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/brick.png" );
+    state.textures[TEXTURE_DOOR] = IMG_Load( "../assets/textures/door.png" );
 
     ascii_map_t ascii_map = {
         .data   = char_map,
