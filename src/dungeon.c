@@ -143,9 +143,14 @@ void generate_map() {
 void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
     int half_wall_height = SCREEN_HALF_HEIGHT / view_t;
 
+    float v_half_delta = 0.5f / half_wall_height;
+    float v_half = 0.0f;
+
     for ( int j = 0; j < half_wall_height; j++ ) {
-        set_pixel( x, SCREEN_HALF_HEIGHT + j, 1.0f, 0.0f, 0.0f );
-        set_pixel( x, SCREEN_HALF_HEIGHT - j, 1.0f, 0.0f, 0.0f );
+        set_pixel( x, SCREEN_HALF_HEIGHT + j, 0.5f - v_half, wall_t, 0.0f );
+        set_pixel( x, SCREEN_HALF_HEIGHT - j, 0.5f + v_half, wall_t, 0.0f );
+
+        v_half += v_half_delta;
     }
 }
 
