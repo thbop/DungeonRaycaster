@@ -42,8 +42,8 @@
 #define WINDOW_HEIGHT      720
 #define WINDOW_FPS         60
 
-#define SCREEN_WIDTH       320
-#define SCREEN_HEIGHT      180
+#define SCREEN_WIDTH       1280
+#define SCREEN_HEIGHT      720
 #define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
 #define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
 
@@ -53,29 +53,29 @@
 #define START_POS          (vec2){ 1.5f, 1.5f }
 #define FOV                90.0f
 #define TURN_SPEED         1.0f
-#define MOVE_SPEED         0.02f
+#define MOVE_SPEED         2.0f
 
 #ifdef __INTELLISENSE__
 #define constexpr
 #endif
 
-const static char char_map[] = 
-    "###/############"
-    "#     ##       #"
-    "#     ##       #"
-    "####  ######   #"
-    "####           #"
-    "#       ####   #"
-    "#       ####   #"
-    "#   ####       #"
-    "#   ####       #"
-    "#       ####   #"
-    "#       ####   #"
-    "####           #"
-    "####  ######   #"
-    "#       ##     #"
-    "#       ##     #"
-    "################";
+// const static char char_map[] = 
+//     "###/############"
+//     "#     ##       #"
+//     "#     ##       #"
+//     "####  ######   #"
+//     "####           #"
+//     "#       ####   #"
+//     "#       ####   #"
+//     "#   ####       #"
+//     "#   ####       #"
+//     "#       ####   #"
+//     "#       ####   #"
+//     "####           #"
+//     "####  ######   #"
+//     "#       ##     #"
+//     "#       ##     #"
+//     "################";
 
 #define SDL_ASSERT( x ) \
     if ( !( x ) ) \
@@ -246,11 +246,11 @@ int main() {
     //     .height = ASCII_MAP_HEIGHT,
     // };
     // map_generate_from_ascii( &state.map, &ascii_map );
-    map_generate_polygon( &state.map, VEC2_ZERO, 5.0f, 3 );
+    map_generate_polygon( &state.map, VEC2_ZERO, 5.0f, 8 );
 
     camera_settings_t camera_settings = {
         .position       = START_POS,
-        .rotation_delta = TURN_SPEED,
+        .rotation_speed = TURN_SPEED,
         .fov            = FOV,
         .move_speed     = MOVE_SPEED,
     };
@@ -258,6 +258,7 @@ int main() {
 
     uint64_t time, last_time = SDL_GetTicks();
     constexpr uint64_t frame_time_target = 1000 / WINDOW_FPS;
+    float delta_time = 0.001f;
 
     // Loop
     bool running = true;
@@ -270,12 +271,12 @@ int main() {
         }
 
         const bool *keys = SDL_GetKeyboardState( NULL );
-        if ( keys[SDL_SCANCODE_LEFT]  ) camera_rotate_left( &state.camera ); 
-        if ( keys[SDL_SCANCODE_RIGHT] ) camera_rotate_right( &state.camera );
-        if ( keys[SDL_SCANCODE_W] )     camera_move_forward( &state.camera );
-        if ( keys[SDL_SCANCODE_S] )     camera_move_backward( &state.camera );
-        if ( keys[SDL_SCANCODE_A] )     camera_move_left( &state.camera );
-        if ( keys[SDL_SCANCODE_D] )     camera_move_right( &state.camera );
+        if ( keys[SDL_SCANCODE_LEFT]  ) camera_rotate_left( &state.camera, delta_time ); 
+        if ( keys[SDL_SCANCODE_RIGHT] ) camera_rotate_right( &state.camera, delta_time );
+        if ( keys[SDL_SCANCODE_W] )     camera_move_forward( &state.camera, delta_time );
+        if ( keys[SDL_SCANCODE_S] )     camera_move_backward( &state.camera, delta_time );
+        if ( keys[SDL_SCANCODE_A] )     camera_move_left( &state.camera, delta_time );
+        if ( keys[SDL_SCANCODE_D] )     camera_move_right( &state.camera, delta_time );
 
         memset( state.pixels, 0, sizeof( state.pixels ) ); // Clear screen
         cast_rays();
@@ -287,6 +288,7 @@ int main() {
 
         time = SDL_GetTicks();
         uint64_t frame_time = time - last_time;
+        delta_time = frame_time / 1000.0f;
         uint64_t delay = frame_time_target - SDL_min( frame_time, frame_time_target );
         SDL_Delay( delay );
         last_time = time;

@@ -34,7 +34,7 @@
 typedef struct {
     vec2 position;
     float
-        rotation_delta, // In degrees
+        rotation_speed,
         fov,            // In degrees
         move_speed;
 } camera_settings_t;
@@ -45,22 +45,18 @@ typedef struct {
 
     float half_sensor_width;
     
+    float _rotation_speed;
     float _move_speed;
-    // Pre-computed rotation matrices
-    // TODO: Possibly improve memory efficiency
-    float
-        _rotate_right[4],
-        _rotate_left[4];
 } camera_t;
 
 
 void camera_new( camera_t *camera, camera_settings_t *settings );
 
-void camera_rotate_right( camera_t *camera );
-void camera_rotate_left( camera_t *camera );
-void camera_move_forward( camera_t *camera );
-void camera_move_backward( camera_t *camera );
-void camera_move_left( camera_t *camera );
-void camera_move_right( camera_t *camera );
+void camera_rotate_right( camera_t *camera, float delta_time );
+void camera_rotate_left( camera_t *camera, float delta_time );
+void camera_move_forward( camera_t *camera, float delta_time );
+void camera_move_backward( camera_t *camera, float delta_time );
+void camera_move_left( camera_t *camera, float delta_time );
+void camera_move_right( camera_t *camera, float delta_time );
 
 #endif
