@@ -46,26 +46,35 @@
 #define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
 #define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
 
-#define MAP_WIDTH          8
-#define MAP_HEIGHT         8
+#define MAP_WIDTH          16
+#define MAP_HEIGHT         16
 
+#define START_POS          (vec2){ 1.5f, 1.5f }
 #define FOV                90.0f
 #define TURN_SPEED         1.0f
-#define MOVE_SPEED         0.01f
+#define MOVE_SPEED         0.02f
 
 #ifdef __INTELLISENSE__
 #define constexpr
 #endif
 
 const static char char_map[] = 
-    "        "
-    "##  #  #"
-    "#      #"
-    "#      #"
-    "#  #####"
-    "#      #"
-    "#      #"
-    "#####  #";
+    "################"
+    "#     ##       #"
+    "#     ##       #"
+    "####  ######   #"
+    "####           #"
+    "#       ####   #"
+    "#       ####   #"
+    "#   ####       #"
+    "#   ####       #"
+    "#       ####   #"
+    "#       ####   #"
+    "####           #"
+    "####  ######   #"
+    "#       ##     #"
+    "#       ##     #"
+    "################";
 
 #define SDL_ASSERT( x ) \
     if ( !( x ) ) \
@@ -168,16 +177,28 @@ vec3 sample_texture( int texture_id, float u, float v ) {
     };
 }
 
+float calculate_light( ray_t *wall ) {
+    vec2
+        perpendicular = { -wall->direction.y, wall->direction.x },
+        normal        = vec2_normalize( &perpendicular );
+    
+    return vec2_dot( &state.camera.view.direction, &normal ) * 0.5f + 0.5f;
+}
+
 void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
     int half_wall_height = SCREEN_HALF_HEIGHT / view_t;
 
     float v_half_delta = 0.5f / half_wall_height;
     float v_half = 0.0f;
 
+    float light = calculate_light( wall );
+
     for ( int j = 0; j < half_wall_height; j++ ) {
         vec3
             color_high = sample_texture( TEXTURE_BRICK, wall_t, 0.5f - v_half ),
             color_low  = sample_texture( TEXTURE_BRICK, wall_t, 0.5f + v_half );
+        color_high = vec3_mul_value( &color_high, light );
+        color_low = vec3_mul_value( &color_low, light );
         
         set_pixel( x, SCREEN_HALF_HEIGHT + j, color_low.x, color_low.y, color_low.z );
         set_pixel( x, SCREEN_HALF_HEIGHT - j, color_high.x, color_high.y, color_high.z );
@@ -269,7 +290,7 @@ int main() {
     generate_map();
 
     camera_settings_t camera_settings = {
-        .position       = VEC2_ZERO,
+        .position       = START_POS,
         .rotation_delta = TURN_SPEED,
         .fov            = FOV,
         .move_speed     = MOVE_SPEED,
