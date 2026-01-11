@@ -22,6 +22,7 @@
 * SOFTWARE.
 */
 
+#include <stdio.h>
 #include <float.h>
 #include <stdint.h>
 #include <SDL3/SDL.h>
@@ -36,25 +37,32 @@
 #define WINDOW_TITLE       "Dungeon"
 #define WINDOW_WIDTH       1280
 #define WINDOW_HEIGHT      720
+#define WINDOW_FPS         60
+
 #define SCREEN_WIDTH       320
 #define SCREEN_HEIGHT      180
 #define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
 #define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
+
 #define MAP_WIDTH          8
 #define MAP_HEIGHT         8
 
-#define TURN_SPEED         0.007f
-#define MOVE_SPEED         0.001f
+#define TURN_SPEED         1.0f
+#define MOVE_SPEED         0.01f
+
+#ifdef __INTELLISENSE__
+#define constexpr
+#endif
 
 const static char char_map[] = 
     "        "
-    "        "
-    "        "
-    "  #  #  "
-    "        "
-    "  #  #  "
-    "        "
-    "        ";
+    "#####  #"
+    "#      #"
+    "#      #"
+    "#  #####"
+    "#      #"
+    "#      #"
+    "#####  #";
 
 #define SDL_ASSERT( x ) \
     if ( !( x ) ) \
@@ -223,12 +231,14 @@ int main() {
 
     camera_settings_t camera_settings = {
         .position       = VEC2_ZERO,
-        .rotation_delta = 0.1f,
+        .rotation_delta = TURN_SPEED,
         .fov            = 100.0f,
         .move_speed     = MOVE_SPEED,
     };
     camera_new( &state.camera, &camera_settings );
 
+    uint64_t time, last_time = SDL_GetTicks();
+    constexpr uint64_t frame_time_target = 1000 / WINDOW_FPS;
 
     // Loop
     bool running = true;
@@ -255,6 +265,12 @@ int main() {
         SDL_UpdateTexture( state.screen, NULL, state.pixels, SCREEN_WIDTH * sizeof( uint32_t ) );
         SDL_RenderTexture( state.renderer, state.screen, NULL, NULL );
         SDL_RenderPresent( state.renderer );
+
+        time = SDL_GetTicks();
+        uint64_t frame_time = time - last_time;
+        uint64_t delay = frame_time_target - SDL_min( frame_time, frame_time_target );
+        SDL_Delay( delay );
+        last_time = time;
 
     }
 
