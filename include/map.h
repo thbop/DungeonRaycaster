@@ -28,8 +28,9 @@
 #include "stdint.h"
 
 #include "chelp/vector_t.h"
-
+#include "vec2.h"
 #include "ray.h"
+#include "matrix.h"
 
 enum {
     TEXTURE_BRICK,
@@ -53,8 +54,11 @@ typedef struct {
 } map_t;
 
 
+void map_initialize( map_t *map );
 
-void map_generate_from_ascii( ascii_map_t *ascii_map, map_t *map );
+void map_generate_from_ascii( map_t *map, ascii_map_t *ascii_map );
+
+void map_generate_polygon( map_t *map, vec2 center, float radius, int sides );
 
 void map_free( map_t *map );
 

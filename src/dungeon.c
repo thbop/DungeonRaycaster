@@ -133,11 +133,7 @@ vec3 sample_texture( int texture_id, float u, float v ) {
 }
 
 float calculate_light( wall_t *wall ) {
-    vec2
-        perpendicular = { -wall->line.direction.y, wall->line.direction.x },
-        normal        = vec2_normalize( &perpendicular );
-    
-    return vec2_dot( &state.camera.view.direction, &normal ) * 0.5f + 0.5f;
+    return vec2_dot( &state.camera.view.direction, &wall->normal ) * 0.5f + 0.5f;
 }
 
 void rasterize_ray_cast( int x, float view_t, float wall_u, wall_t *wall ) {
@@ -146,12 +142,14 @@ void rasterize_ray_cast( int x, float view_t, float wall_u, wall_t *wall ) {
     float v_half_delta = 0.5f / half_wall_height;
     float v_half = 0.0f;
 
+    float u = SDL_fmodf( wall_u * vec2_length( &wall->line.direction ), 1.0f );
+
     float light = calculate_light( wall );
 
     for ( int j = 0; j < half_wall_height; j++ ) {
         vec3
-            color_high = sample_texture( wall->texture_id, wall_u, 0.5f - v_half ),
-            color_low  = sample_texture( wall->texture_id, wall_u, 0.5f + v_half );
+            color_high = sample_texture( wall->texture_id, u, 0.5f - v_half ),
+            color_low  = sample_texture( wall->texture_id, u, 0.5f + v_half );
         color_high = vec3_mul_value( &color_high, light );
         color_low = vec3_mul_value( &color_low, light );
         
@@ -241,12 +239,14 @@ int main() {
     state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/brick.png" );
     state.textures[TEXTURE_DOOR] = IMG_Load( "../assets/textures/door.png" );
 
-    ascii_map_t ascii_map = {
-        .data   = char_map,
-        .width  = ASCII_MAP_WIDTH,
-        .height = ASCII_MAP_HEIGHT,
-    };
-    map_generate_from_ascii( &ascii_map, &state.map );
+    map_initialize( &state.map );
+    // ascii_map_t ascii_map = {
+    //     .data   = char_map,
+    //     .width  = ASCII_MAP_WIDTH,
+    //     .height = ASCII_MAP_HEIGHT,
+    // };
+    // map_generate_from_ascii( &state.map, &ascii_map );
+    map_generate_polygon( &state.map, VEC2_ZERO, 5.0f, 3 );
 
     camera_settings_t camera_settings = {
         .position       = START_POS,

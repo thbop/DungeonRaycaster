@@ -55,9 +55,11 @@ char _ascii_map_get_tile( ascii_map_t *ascii_map, int x, int y ) {
     return ascii_map->data[ y * ascii_map->width + x ];
 }
 
-void map_generate_from_ascii( ascii_map_t *ascii_map, map_t *map ) {
+void map_initialize( map_t *map ) {
     map->walls = new_vector( wall_t );
+}
 
+void map_generate_from_ascii( map_t *map, ascii_map_t *ascii_map ) {
     for ( int j = 0; j < ascii_map->height; j++ ) {
         for ( int i = 0; i < ascii_map->width; i++ ) {
             wall_t wall;
@@ -82,6 +84,29 @@ void map_generate_from_ascii( ascii_map_t *ascii_map, map_t *map ) {
                 }
             }
         }
+    }
+}
+
+void map_generate_polygon( map_t *map, vec2 center, float radius, int sides ) {
+    float
+        theta     = 2.0f * SDL_PI_F / sides,
+        sin_theta = SDL_sinf( theta ),
+        cos_theta = SDL_cosf( theta );
+
+    float rotation_matrix[4] = {
+         cos_theta, -sin_theta,
+         sin_theta,  cos_theta,
+    };
+
+    vec2 point, last_point = { radius, 0.0f };
+    wall_t wall;
+    for ( int i = 0; i < sides; i++ ) {
+        point = mat2_transform( rotation_matrix, &last_point );
+
+        _wall_new( vec2_add( &center, &point ), vec2_add( &center, &last_point ), TEXTURE_BRICK, &wall );
+        vector_append( map->walls, wall );
+
+        last_point = point;
     }
 }
 
