@@ -5,3 +5,4 @@
 /include/chelp
 /include/SDL3
 *.a
+/include/SDL3_image

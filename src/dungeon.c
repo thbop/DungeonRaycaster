@@ -26,9 +26,11 @@
 #include <float.h>
 #include <stdint.h>
 #include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
 #include <chelp/vector_t.h>
 
 #include "vec2.h"
+#include "vec3.h"
 #include "ray.h"
 #include "matrix.h"
 #include "camera.h"
@@ -47,6 +49,7 @@
 #define MAP_WIDTH          8
 #define MAP_HEIGHT         8
 
+#define FOV                90.0f
 #define TURN_SPEED         1.0f
 #define MOVE_SPEED         0.01f
 
@@ -56,7 +59,7 @@
 
 const static char char_map[] = 
     "        "
-    "#####  #"
+    "##  #  #"
     "#      #"
     "#      #"
     "#  #####"
@@ -69,12 +72,19 @@ const static char char_map[] =
         SDL_Log( "ERROR: %s", SDL_GetError() )
 
 
+enum {
+    TEXTURE_BRICK,
+    TEXTURE_COUNT,
+};
+
 
 static struct {
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *screen;
     uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
+
+    SDL_Surface *textures[TEXTURE_COUNT];
 
     vector_t map;
     camera_t camera;
@@ -84,6 +94,10 @@ static struct {
 
 uint32_t float_to_byte( float value ) {
     return SDL_clamp( value, 0.0f, 1.0f ) * 255;
+}
+
+float byte_to_float( uint8_t value ) {
+    return (float)value * 0.0039215686f; // / 255.0f
 }
 
 void set_pixel( int x, int y, float r, float g, float b ) {
@@ -120,7 +134,7 @@ void generate_map() {
             ray_t ray_line;
             if ( char_map_get_tile( i, j ) == '#' ) {
                 if ( char_map_get_tile( i - 1, j ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i, j }, (vec2){ i, j + 1 } );
+                    ray_line = get_ray_line( (vec2){ i, j + 1 }, (vec2){ i, j } );
                     vector_append( state.map, ray_line );
                 }
                 if ( char_map_get_tile( i, j - 1 ) == ' ' ) {
@@ -132,12 +146,26 @@ void generate_map() {
                     vector_append( state.map, ray_line );
                 }
                 if ( char_map_get_tile( i, j + 1 ) == ' ' ) {
-                    ray_line = get_ray_line( (vec2){ i, j + 1 }, (vec2){ i + 1, j + 1 } );
+                    ray_line = get_ray_line( (vec2){ i + 1, j + 1 }, (vec2){ i, j + 1 } );
                     vector_append( state.map, ray_line );
                 }
             }
         }
     }
+}
+
+vec3 sample_texture( int texture_id, float u, float v ) {
+    SDL_Surface *texture = state.textures[texture_id];
+
+    int x = u * texture->w;
+    int y = v * texture->h;
+
+    uint32_t pixel = ( (uint32_t*)texture->pixels )[ y * texture->w + x ];
+    return (vec3){
+        byte_to_float( ( pixel       ) & 0xFF ),
+        byte_to_float( ( pixel >> 8  ) & 0xFF ),
+        byte_to_float( ( pixel >> 16 ) & 0xFF ),
+    };
 }
 
 void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
@@ -147,8 +175,12 @@ void rasterize_ray_cast( int x, float view_t, float wall_t, ray_t *wall ) {
     float v_half = 0.0f;
 
     for ( int j = 0; j < half_wall_height; j++ ) {
-        set_pixel( x, SCREEN_HALF_HEIGHT + j, 0.5f - v_half, wall_t, 0.0f );
-        set_pixel( x, SCREEN_HALF_HEIGHT - j, 0.5f + v_half, wall_t, 0.0f );
+        vec3
+            color_high = sample_texture( TEXTURE_BRICK, wall_t, 0.5f - v_half ),
+            color_low  = sample_texture( TEXTURE_BRICK, wall_t, 0.5f + v_half );
+        
+        set_pixel( x, SCREEN_HALF_HEIGHT + j, color_low.x, color_low.y, color_low.z );
+        set_pixel( x, SCREEN_HALF_HEIGHT - j, color_high.x, color_high.y, color_high.z );
 
         v_half += v_half_delta;
     }
@@ -232,12 +264,14 @@ int main() {
     ) );
     SDL_SetTextureScaleMode( state.screen, SDL_SCALEMODE_NEAREST );
 
+    state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/bricks.png" );
+
     generate_map();
 
     camera_settings_t camera_settings = {
         .position       = VEC2_ZERO,
         .rotation_delta = TURN_SPEED,
-        .fov            = 100.0f,
+        .fov            = FOV,
         .move_speed     = MOVE_SPEED,
     };
     camera_new( &state.camera, &camera_settings );
@@ -280,6 +314,9 @@ int main() {
     }
 
     // Cleanup
+    for ( int i = 0; i < TEXTURE_COUNT; i++ )
+        SDL_DestroySurface( state.textures[i] );
+
     vector_free( state.map );
 
     SDL_DestroyTexture( state.screen );

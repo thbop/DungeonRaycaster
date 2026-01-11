@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Iinclude -std=c23 -fdiagnostics-color=always -g
-CLIB = -Llib -lSDL3 -lchelp
+CLIB = -Llib -lSDL3 -lSDL3_image -lchelp
 
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, bin/%.o, $(SRC))
