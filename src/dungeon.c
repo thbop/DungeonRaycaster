@@ -42,8 +42,8 @@
 #define WINDOW_HEIGHT      720
 #define WINDOW_FPS         60
 
-#define SCREEN_WIDTH       1280
-#define SCREEN_HEIGHT      720
+#define SCREEN_WIDTH       320
+#define SCREEN_HEIGHT      180
 #define SCREEN_HALF_WIDTH  ( SCREEN_WIDTH >> 1 )
 #define SCREEN_HALF_HEIGHT ( SCREEN_HEIGHT >> 1 )
 
@@ -52,30 +52,31 @@
 
 #define START_POS          (vec2){ 1.5f, 1.5f }
 #define FOV                90.0f
-#define TURN_SPEED         1.0f
+#define TURN_SPEED         2.0f
+#define MOUSE_SENSITIVITY  0.34f
 #define MOVE_SPEED         2.0f
 
 #ifdef __INTELLISENSE__
 #define constexpr
 #endif
 
-// const static char char_map[] = 
-//     "###/############"
-//     "#     ##       #"
-//     "#     ##       #"
-//     "####  ######   #"
-//     "####           #"
-//     "#       ####   #"
-//     "#       ####   #"
-//     "#   ####       #"
-//     "#   ####       #"
-//     "#       ####   #"
-//     "#       ####   #"
-//     "####           #"
-//     "####  ######   #"
-//     "#       ##     #"
-//     "#       ##     #"
-//     "################";
+const static char char_map[] = 
+    "###/############"
+    "#     ##       #"
+    "#     ##       #"
+    "####  ######   #"
+    "####           #"
+    "#       ####   #"
+    "#       ####   #"
+    "#   ####       #"
+    "#   ####       #"
+    "#       ####   #"
+    "#       ####   #"
+    "####           #"
+    "####  ######   #"
+    "#       ##     #"
+    "#       ##     #"
+    "################";
 
 #define SDL_ASSERT( x ) \
     if ( !( x ) ) \
@@ -93,6 +94,8 @@ static struct {
 
     map_t map;
     camera_t camera;
+
+    bool mouse_grabbed;
 } state;
 
 
@@ -227,6 +230,9 @@ int main() {
         &state.renderer
     ) );
 
+    SDL_SetWindowRelativeMouseMode( state.window, true );
+    state.mouse_grabbed = true;
+
     SDL_ASSERT( state.screen = SDL_CreateTexture(
         state.renderer,
         SDL_PIXELFORMAT_XRGB8888,
@@ -240,13 +246,13 @@ int main() {
     state.textures[TEXTURE_DOOR] = IMG_Load( "../assets/textures/door.png" );
 
     map_initialize( &state.map );
-    // ascii_map_t ascii_map = {
-    //     .data   = char_map,
-    //     .width  = ASCII_MAP_WIDTH,
-    //     .height = ASCII_MAP_HEIGHT,
-    // };
-    // map_generate_from_ascii( &state.map, &ascii_map );
-    map_generate_polygon( &state.map, VEC2_ZERO, 5.0f, 8 );
+    ascii_map_t ascii_map = {
+        .data   = char_map,
+        .width  = ASCII_MAP_WIDTH,
+        .height = ASCII_MAP_HEIGHT,
+    };
+    map_generate_from_ascii( &state.map, &ascii_map );
+    // map_generate_polygon( &state.map, VEC2_ZERO, 5.0f, 8 );
 
     camera_settings_t camera_settings = {
         .position       = START_POS,
@@ -266,13 +272,34 @@ int main() {
         // Handle events
         SDL_Event event;
         while ( SDL_PollEvent( &event ) ) {
-            if ( event.type == SDL_EVENT_QUIT )
-                running = false;
+            switch ( event.type ) {
+                case SDL_EVENT_QUIT:
+                    running = false;
+                    break;
+                case SDL_EVENT_KEY_DOWN:
+                    if ( event.key.scancode == SDL_SCANCODE_ESCAPE ) {
+                        SDL_SetWindowRelativeMouseMode( state.window, false );
+                        state.mouse_grabbed = false;
+                    }
+                    break;
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    if ( !state.mouse_grabbed ) {
+                        SDL_SetWindowRelativeMouseMode( state.window, true );
+                        state.mouse_grabbed = true;
+                    }
+                    break;
+            }
         }
 
+        // Handle input
+        float mouse_delta_x;
+        SDL_GetRelativeMouseState( &mouse_delta_x, NULL );
+        if ( SDL_fabsf( mouse_delta_x ) > 0.001 && state.mouse_grabbed )
+            camera_rotate( &state.camera, mouse_delta_x * MOUSE_SENSITIVITY, delta_time );
+
         const bool *keys = SDL_GetKeyboardState( NULL );
-        if ( keys[SDL_SCANCODE_LEFT]  ) camera_rotate_left( &state.camera, delta_time ); 
-        if ( keys[SDL_SCANCODE_RIGHT] ) camera_rotate_right( &state.camera, delta_time );
+        if ( keys[SDL_SCANCODE_LEFT]  ) camera_turn_left( &state.camera, delta_time ); 
+        if ( keys[SDL_SCANCODE_RIGHT] ) camera_turn_right( &state.camera, delta_time );
         if ( keys[SDL_SCANCODE_W] )     camera_move_forward( &state.camera, delta_time );
         if ( keys[SDL_SCANCODE_S] )     camera_move_backward( &state.camera, delta_time );
         if ( keys[SDL_SCANCODE_A] )     camera_move_left( &state.camera, delta_time );

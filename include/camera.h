@@ -52,8 +52,9 @@ typedef struct {
 
 void camera_new( camera_t *camera, camera_settings_t *settings );
 
-void camera_rotate_right( camera_t *camera, float delta_time );
-void camera_rotate_left( camera_t *camera, float delta_time );
+void camera_rotate( camera_t *camera, float delta, float delta_time );
+void camera_turn_right( camera_t *camera, float delta_time );
+void camera_turn_left( camera_t *camera, float delta_time );
 void camera_move_forward( camera_t *camera, float delta_time );
 void camera_move_backward( camera_t *camera, float delta_time );
 void camera_move_left( camera_t *camera, float delta_time );

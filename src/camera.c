@@ -43,30 +43,25 @@ void camera_new( camera_t *camera, camera_settings_t *settings ) {
     };
 }
 
-void camera_rotate_right( camera_t *camera, float delta_time ) {
+void camera_rotate( camera_t *camera, float delta, float delta_time ) {
     float
-        sin_theta = SDL_sinf( camera->_rotation_speed * delta_time ), // sin(-x) = -sin(x) 
-        cos_theta = SDL_cosf( camera->_rotation_speed * delta_time ); // cos(-x) =  cos(x)
+        sin_theta = SDL_sinf( delta * delta_time ), 
+        cos_theta = SDL_cosf( delta * delta_time );
     
-    float rotate_right[] = {
+    float rotate[] = {
          cos_theta,  sin_theta,
         -sin_theta,  cos_theta,
     };
-    camera->view.direction = mat2_transform( rotate_right, &camera->view.direction );
-    camera->perpendicular_direction = mat2_transform( rotate_right, &camera->perpendicular_direction );
+    camera->view.direction = mat2_transform( rotate, &camera->view.direction );
+    camera->perpendicular_direction = mat2_transform( rotate, &camera->perpendicular_direction );
 }
 
-void camera_rotate_left( camera_t *camera, float delta_time ) {
-    float
-        sin_theta = SDL_sinf( camera->_rotation_speed * delta_time ), // sin(-x) = -sin(x) 
-        cos_theta = SDL_cosf( camera->_rotation_speed * delta_time ); // cos(-x) =  cos(x)
-    
-    float rotate_left[] = {
-         cos_theta, -sin_theta,
-         sin_theta,  cos_theta,
-    };
-    camera->view.direction = mat2_transform( rotate_left, &camera->view.direction );
-    camera->perpendicular_direction = mat2_transform( rotate_left, &camera->perpendicular_direction );
+void camera_turn_right( camera_t *camera, float delta_time ) {
+    camera_rotate( camera, camera->_rotation_speed, delta_time );
+}
+
+void camera_turn_left( camera_t *camera, float delta_time ) {
+    camera_rotate( camera, -camera->_rotation_speed, delta_time );
 }
 
 void camera_move_forward( camera_t *camera, float delta_time ) {
