@@ -56,6 +56,8 @@
 #define MOUSE_SENSITIVITY  0.2f
 #define MOVE_SPEED         2.0f
 
+#define MIST_DIST          10.0f
+
 #ifdef __INTELLISENSE__
 #define constexpr
 #endif
@@ -135,8 +137,13 @@ vec3 sample_texture( int texture_id, float u, float v ) {
     };
 }
 
-float calculate_light( wall_t *wall ) {
-    return vec2_dot( &state.camera.view.direction, &wall->normal ) * 0.5f + 0.5f;
+vec3 calculate_light( wall_t *wall ) {
+    float mist_dist = vec2_squared_distance_to( &state.camera.view.origin, &wall->line.origin );
+    float mist = fminf( MIST_DIST / mist_dist, 2.0f );
+
+    float intensity = vec2_dot( &state.camera.view.direction, &wall->normal ) * 0.5f + 0.5f;
+    vec3 color = { 0.988f, 0.861f, 0.841f };
+    return vec3_mul_value( &color, intensity * mist );
 }
 
 void rasterize_ray_cast( int x, float view_t, float wall_u, wall_t *wall ) {
@@ -147,14 +154,14 @@ void rasterize_ray_cast( int x, float view_t, float wall_u, wall_t *wall ) {
 
     float u = SDL_fmodf( wall_u * vec2_length( &wall->line.direction ), 1.0f );
 
-    float light = calculate_light( wall );
+    vec3 light = calculate_light( wall );
 
     for ( int j = 0; j < half_wall_height; j++ ) {
         vec3
             color_high = sample_texture( wall->texture_id, u, 0.5f - v_half ),
             color_low  = sample_texture( wall->texture_id, u, 0.5f + v_half );
-        color_high = vec3_mul_value( &color_high, light );
-        color_low = vec3_mul_value( &color_low, light );
+        color_high = vec3_mul( &color_high, &light );
+        color_low = vec3_mul( &color_low, &light );
         
         set_pixel( x, SCREEN_HALF_HEIGHT + j, color_low.x, color_low.y, color_low.z );
         set_pixel( x, SCREEN_HALF_HEIGHT - j, color_high.x, color_high.y, color_high.z );
