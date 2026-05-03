@@ -53,7 +53,7 @@
 #define START_POS          (vec2){ 1.5f, 1.5f }
 #define FOV                90.0f
 #define TURN_SPEED         2.0f
-#define MOUSE_SENSITIVITY  0.34f
+#define MOUSE_SENSITIVITY  0.2f
 #define MOVE_SPEED         2.0f
 
 #ifdef __INTELLISENSE__
@@ -242,8 +242,8 @@ int main() {
     ) );
     SDL_SetTextureScaleMode( state.screen, SDL_SCALEMODE_NEAREST );
 
-    state.textures[TEXTURE_BRICK] = IMG_Load( "../assets/textures/brick.png" );
-    state.textures[TEXTURE_DOOR] = IMG_Load( "../assets/textures/door.png" );
+    SDL_ASSERT( state.textures[TEXTURE_BRICK] = IMG_Load( "assets/textures/brick.png" ) );
+    SDL_ASSERT( state.textures[TEXTURE_DOOR] = IMG_Load( "assets/textures/door.png" ) );
 
     map_initialize( &state.map );
     ascii_map_t ascii_map = {
